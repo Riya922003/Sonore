@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { SkeletonTheme } from 'react-loading-skeleton';
+import { Analytics } from '@vercel/analytics/react';
 import Sidebar from './components/Sidebar.tsx';
 import TopNav from './components/TopNav.tsx';
 import MainContent from './components/MainContent.tsx';
@@ -132,6 +133,9 @@ function App() {
             },
           }}
         />
+        
+        {/* Vercel Analytics */}
+        <Analytics />
       </Router>
     </SkeletonTheme>
   );
