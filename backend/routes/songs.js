@@ -344,7 +344,7 @@ Return only the search query text.`;
         part: 'snippet',
         q: finalQuery,
         type: 'video',
-        maxResults: 1,
+        maxResults: 5,
         order: 'relevance'
       });
 
@@ -353,8 +353,24 @@ Return only the search query text.`;
         return res.status(404).json({ success: false, message: 'No video found for this song' });
       }
 
-      const videoItem = items[0];
-      const videoId = videoItem.id && videoItem.id.videoId ? videoItem.id.videoId : null;
+      // Prefer a result whose title contains both the song title and artist name,
+      // then fall back to any result with 'official' in the title, then take the first.
+      const titleLower = title.toLowerCase();
+      const artistLower = artist.toLowerCase();
+      const officialKeywords = ['official', 'lyric', 'audio'];
+
+      const bestMatch =
+        items.find(item => {
+          const t = (item.snippet && item.snippet.title || '').toLowerCase();
+          return t.includes(titleLower) && t.includes(artistLower);
+        }) ||
+        items.find(item => {
+          const t = (item.snippet && item.snippet.title || '').toLowerCase();
+          return officialKeywords.some(k => t.includes(k)) && t.includes(titleLower);
+        }) ||
+        items[0];
+
+      const videoId = bestMatch && bestMatch.id && bestMatch.id.videoId ? bestMatch.id.videoId : null;
       if (!videoId) {
         return res.status(404).json({ success: false, message: 'No video id found in YouTube response' });
       }
@@ -428,22 +444,13 @@ router.get('/:id/lyrics/stream', authMiddleware, async (req, res) => {
     let accumulated = '';
 
     try {
-      const stream = await model.streamGenerateContent({
-        prompt,
-        // keep defaults for safety; you can tune temperature/length if needed
-      });
+      const result = await model.generateContentStream(prompt);
 
-      // stream.response is an async iterator of chunks
-      for await (const chunk of stream.response) {
+      for await (const chunk of result.stream) {
         try {
-          const text = (chunk && chunk.text) ? chunk.text() : (chunk && chunk.delta ? chunk.delta : '');
+          const text = chunk.text();
           if (!text) continue;
-
-          // Immediately send the chunk to the client as an SSE data event
-          // We JSON-encode the payload to avoid newline issues
           res.write(`data: ${JSON.stringify({ chunk: text })}\n\n`);
-
-          // Accumulate for saving later
           accumulated += text;
         } catch (innerErr) {
           console.error('Error while streaming chunk to client:', innerErr);
@@ -456,17 +463,15 @@ router.get('/:id/lyrics/stream', authMiddleware, async (req, res) => {
         await song.save();
       } catch (saveErr) {
         console.error('Failed to save generated lyrics:', saveErr);
-        // Inform client but keep going to end the stream
         res.write(`event: error\ndata: ${JSON.stringify({ message: 'Failed to save lyrics' })}\n\n`);
       }
 
-      // Signal end-of-stream to client (optional) and close
       res.write(`event: done\ndata: ${JSON.stringify({ message: 'finished' })}\n\n`);
       return res.end();
 
     } catch (aiErr) {
       console.error('Error during Gemini streaming:', aiErr);
-      res.write(`event: error\ndata: ${JSON.stringify({ message: 'AI streaming error' })}\n\n`);
+      res.write(`event: error\ndata: ${JSON.stringify({ message: 'AI streaming error: ' + aiErr.message })}\n\n`);
       return res.end();
     }
 
