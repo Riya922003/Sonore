@@ -514,7 +514,7 @@ router.get('/:id/insights', authMiddleware, async (req, res) => {
     // 1. Fetch song details (title and artist)
     let song;
     try {
-      song = await Song.findById(id).select('title artist');
+      song = await Song.findById(id).select('title artist insights');
     } catch (dbErr) {
       console.error('Database error while fetching song for insights:', dbErr);
       return res.status(500).json({ success: false, message: 'Database error while fetching song.' });
@@ -522,6 +522,11 @@ router.get('/:id/insights', authMiddleware, async (req, res) => {
 
     if (!song) {
       return res.status(404).json({ success: false, message: 'Song not found' });
+    }
+
+    // Return cached insight if available
+    if (song.insights && song.insights.trim() !== '') {
+      return res.status(200).json({ insight: song.insights });
     }
 
     const title = (song.title || '').trim();
@@ -551,6 +556,14 @@ Return only the single-paragraph insight (100-150 words).`;
       if (!insightText) {
         console.error('Gemini returned empty insight for song:', id);
         return res.status(500).json({ success: false, message: 'AI returned no insight for this song.' });
+      }
+
+      // Cache insight in DB so future requests skip Gemini
+      try {
+        song.insights = insightText;
+        await song.save();
+      } catch (saveErr) {
+        console.error('Failed to cache insight in DB:', saveErr);
       }
 
       return res.status(200).json({ insight: insightText });

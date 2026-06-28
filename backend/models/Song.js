@@ -25,12 +25,14 @@ const songSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  // Full lyrics text (optional) - populated when generated or uploaded
   lyrics: {
     type: String,
     default: ''
   },
-  // --- END NEW FIELD ---
+  insights: {
+    type: String,
+    default: ''
+  },
   duration: {
     type: Number,
     required: true
