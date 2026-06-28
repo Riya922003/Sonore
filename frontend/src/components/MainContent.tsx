@@ -16,17 +16,41 @@ const MainContent: React.FC = () => {
         title="Featured" 
         fetchUrl="/api/songs/featured" 
       />
-      <MusicSection 
-        title="Latest Punjabi" 
-        fetchUrl="/api/songs?language=punjabi" 
+      <MusicSection
+        title="Latest Punjabi"
+        fetchUrl="/api/songs?language=punjabi"
       />
-      <MusicSection 
-        title="Top English" 
-        fetchUrl="/api/songs?language=english" 
+      <MusicSection
+        title="Top English"
+        fetchUrl="/api/songs?language=english"
       />
-      <MusicSection 
-        title="Bollywood Hits" 
-        fetchUrl="/api/songs?genre=Bollywood" 
+      <MusicSection
+        title="Bollywood Hits"
+        fetchUrl="/api/songs?language=hindi"
+      />
+      <MusicSection
+        title="Latin Vibes"
+        fetchUrl="/api/songs?language=spanish"
+      />
+      <MusicSection
+        title="K-Pop"
+        fetchUrl="/api/songs?language=korean"
+      />
+      <MusicSection
+        title="Hip Hop"
+        fetchUrl="/api/songs?genre=Hip Hop"
+      />
+      <MusicSection
+        title="R&B"
+        fetchUrl="/api/songs?genre=R%26B"
+      />
+      <MusicSection
+        title="Indie"
+        fetchUrl="/api/songs?genre=Indie"
+      />
+      <MusicSection
+        title="Classical"
+        fetchUrl="/api/songs?genre=Classical"
       />
     </div>
   );
