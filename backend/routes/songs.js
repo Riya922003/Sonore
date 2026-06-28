@@ -353,32 +353,34 @@ Return only the search query text.`;
         return res.status(404).json({ success: false, message: 'No video found for this song' });
       }
 
-      // Prefer a result whose title contains both the song title and artist name,
-      // then fall back to any result with 'official' in the title, then take the first.
+      // Rank results: prefer title+artist match, then official keyword match, then rest
       const titleLower = title.toLowerCase();
       const artistLower = artist.toLowerCase();
       const officialKeywords = ['official', 'lyric', 'audio'];
 
-      const bestMatch =
-        items.find(item => {
+      const scored = items
+        .filter(item => item.id && item.id.videoId)
+        .map(item => {
           const t = (item.snippet && item.snippet.title || '').toLowerCase();
-          return t.includes(titleLower) && t.includes(artistLower);
-        }) ||
-        items.find(item => {
-          const t = (item.snippet && item.snippet.title || '').toLowerCase();
-          return officialKeywords.some(k => t.includes(k)) && t.includes(titleLower);
-        }) ||
-        items[0];
+          let score = 0;
+          if (t.includes(titleLower) && t.includes(artistLower)) score += 3;
+          else if (t.includes(titleLower)) score += 2;
+          if (officialKeywords.some(k => t.includes(k))) score += 1;
+          return { videoId: item.id.videoId, score };
+        })
+        .sort((a, b) => b.score - a.score);
 
-      const videoId = bestMatch && bestMatch.id && bestMatch.id.videoId ? bestMatch.id.videoId : null;
-      if (!videoId) {
+      if (scored.length === 0) {
         return res.status(404).json({ success: false, message: 'No video id found in YouTube response' });
       }
 
-      // 6. Return response with metadata for debugging
+      // Return top 3 so the frontend can try fallbacks if one is embed-blocked
+      const videoIds = scored.slice(0, 3).map(s => s.videoId);
+
       return res.status(200).json({
         success: true,
-        videoId,
+        videoId: videoIds[0],
+        videoIds,
         searchQuery: finalQuery,
         aiCandidate: aiQuery,
         usedFallback
@@ -434,7 +436,7 @@ router.get('/:id/lyrics/stream', authMiddleware, async (req, res) => {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
     // Build a detailed prompt for lyrics generation
     const title = (song.title || '').trim();

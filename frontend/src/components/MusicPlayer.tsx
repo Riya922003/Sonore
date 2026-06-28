@@ -237,7 +237,7 @@ const MusicPlayer: React.FC = () => {
       
       if (response.data.success && response.data.videoId) {
         console.log('Video found:', response.data.videoId);
-        openVideoModal(response.data.videoId);
+        openVideoModal(response.data.videoId, response.data.videoIds);
       } else {
         console.error('No video found for this song');
         // You could show a toast notification here

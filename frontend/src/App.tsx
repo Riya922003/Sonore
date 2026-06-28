@@ -27,7 +27,7 @@ function App() {
   const { isNowPlayingPanelOpen } = useUI();
   const { isAuthModalOpen } = useAuth();
   const { isSearchOpen, openSearch } = useSearch();
-  const { isBlendModalOpen, closeBlendModal, isVideoModalOpen, currentVideoId, closeVideoModal } = useUI();
+  const { isBlendModalOpen, closeBlendModal, isVideoModalOpen, currentVideoId, currentVideoIds, closeVideoModal } = useUI();
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
@@ -103,8 +103,9 @@ function App() {
         {isBlendModalOpen && <BlendModal isOpen={isBlendModalOpen} onClose={closeBlendModal} />}
         
         {/* Video Modal */}
-        <VideoModal 
+        <VideoModal
           videoId={currentVideoId}
+          videoIds={currentVideoIds}
           isOpen={isVideoModalOpen}
           onClose={closeVideoModal}
         />

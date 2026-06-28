@@ -1,15 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import YouTube from 'react-youtube';
 import { usePlayer } from '../contexts/PlayerContext';
 
 interface VideoModalProps {
   videoId: string;
+  videoIds?: string[];
   isOpen: boolean;
   onClose: () => void;
 }
 
-const VideoModal: React.FC<VideoModalProps> = ({ videoId, isOpen, onClose }) => {
+const VideoModal: React.FC<VideoModalProps> = ({ videoId, videoIds = [], isOpen, onClose }) => {
   const { isPlaying, togglePlayPause } = usePlayer();
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Reset index whenever the videoId changes (new song)
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [videoId]);
+
+  const allIds = videoIds.length > 0 ? videoIds : [videoId];
+  const activeVideoId = allIds[currentIndex] || videoId;
+
+  const handleVideoError = () => {
+    if (currentIndex < allIds.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+    }
+  };
 
   // YouTube player options
   const opts = {
@@ -89,15 +105,14 @@ const VideoModal: React.FC<VideoModalProps> = ({ videoId, isOpen, onClose }) => 
         {/* Video container */}
         <div className="relative w-full" style={{ paddingBottom: '56.25%' /* 16:9 aspect ratio */ }}>
           <div className="absolute inset-0 flex items-center justify-center">
-            {videoId ? (
+            {activeVideoId ? (
               <YouTube
-                videoId={videoId}
+                key={activeVideoId}
+                videoId={activeVideoId}
                 opts={opts}
                 className="w-full h-full"
                 iframeClassName="w-full h-full"
-                onError={(error) => {
-                  console.error('YouTube player error:', error);
-                }}
+                onError={handleVideoError}
               />
             ) : (
               <div className="text-gray-400 text-center p-8">

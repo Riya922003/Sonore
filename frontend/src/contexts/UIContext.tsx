@@ -25,7 +25,8 @@ interface UIContextType {
   // Video Modal state
   isVideoModalOpen: boolean;
   currentVideoId: string;
-  openVideoModal: (videoId: string) => void;
+  currentVideoIds: string[];
+  openVideoModal: (videoId: string, videoIds?: string[]) => void;
   closeVideoModal: () => void;
   // Now playing side panel visibility
   isNowPlayingPanelOpen: boolean;
@@ -53,6 +54,7 @@ export const UIProvider: React.FC<UIProviderProps> = ({ children }) => {
   const [isBlendModalOpen, setIsBlendModalOpen] = useState(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [currentVideoId, setCurrentVideoId] = useState('');
+  const [currentVideoIds, setCurrentVideoIds] = useState<string[]>([]);
   const [isNowPlayingPanelOpen, setIsNowPlayingPanelOpen] = useState(true);
   const [insightRequestCounter, setInsightRequestCounter] = useState(0);
 
@@ -87,14 +89,16 @@ export const UIProvider: React.FC<UIProviderProps> = ({ children }) => {
     setIsBlendModalOpen(false);
   };
 
-  const openVideoModal = (videoId: string) => {
+  const openVideoModal = (videoId: string, videoIds?: string[]) => {
     setCurrentVideoId(videoId);
+    setCurrentVideoIds(videoIds || [videoId]);
     setIsVideoModalOpen(true);
   };
 
   const closeVideoModal = () => {
     setIsVideoModalOpen(false);
     setCurrentVideoId('');
+    setCurrentVideoIds([]);
   };
 
   const openNowPlayingPanel = () => setIsNowPlayingPanelOpen(true);
@@ -116,6 +120,7 @@ export const UIProvider: React.FC<UIProviderProps> = ({ children }) => {
     closeBlendModal,
     isVideoModalOpen,
     currentVideoId,
+    currentVideoIds,
     openVideoModal,
     closeVideoModal,
     isNowPlayingPanelOpen,
