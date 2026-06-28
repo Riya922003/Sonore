@@ -103,6 +103,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen }) => {
     setFormData({ name: '', email: '', password: '' });
   };
 
+  const fillDemoCredentials = () => {
+    setIsLogin(true);
+    setError('');
+    setFormData({ name: '', email: 'test11@gmail.com', password: 'test@123' });
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -200,6 +206,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen }) => {
             className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white font-medium py-3 px-4 rounded-md transition-colors"
           >
             {isLoading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}
+          </button>
+
+          {/* Demo credentials */}
+          <button
+            type="button"
+            onClick={fillDemoCredentials}
+            className="w-full border border-gray-600 hover:border-gray-400 text-gray-300 hover:text-white font-medium py-2.5 px-4 rounded-md transition-colors text-sm"
+          >
+            Use Demo Account
           </button>
         </form>
 
