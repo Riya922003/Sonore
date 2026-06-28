@@ -9,6 +9,26 @@ const { google } = require('googleapis');
 
 const router = express.Router();
 
+// Retry helper for Gemini API calls
+// Retries on 429 (rate limit) and 5xx errors, with exponential backoff
+async function geminiWithRetry(fn, maxRetries = 3) {
+  let lastErr;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const status = err.status || err.statusCode || (err.response && err.response.status);
+      const retryable = status === 429 || status === 500 || status === 503 || !status;
+      if (!retryable || attempt === maxRetries) throw err;
+      const delay = Math.min(1000 * 2 ** (attempt - 1), 8000); // 1s, 2s, 4s
+      console.warn(`Gemini attempt ${attempt} failed (status ${status}), retrying in ${delay}ms...`);
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+  throw lastErr;
+}
+
 // GET all songs with optional filtering by language and genre
 router.get('/', async (req, res) => {
   try {
@@ -308,13 +328,13 @@ Return only the search query text.`;
         return res.status(500).json({ success: false, message: 'GEMINI_API_KEY not configured' });
       }
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-      const result = await model.generateContent(prompt);
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const result = await geminiWithRetry(() => model.generateContent(prompt));
       const response = await result.response;
       aiQuery = (response && response.text && response.text().trim()) || '';
       console.log('Gemini candidate query:', aiQuery);
     } catch (err) {
-      console.error('Gemini generation error:', err);
+      console.error('Gemini generation error after retries:', err);
       aiQuery = '';
     }
 
@@ -446,7 +466,7 @@ router.get('/:id/lyrics/stream', authMiddleware, async (req, res) => {
     let accumulated = '';
 
     try {
-      const result = await model.generateContentStream(prompt);
+      const result = await geminiWithRetry(() => model.generateContentStream(prompt));
 
       for await (const chunk of result.stream) {
         try {
@@ -472,7 +492,7 @@ router.get('/:id/lyrics/stream', authMiddleware, async (req, res) => {
       return res.end();
 
     } catch (aiErr) {
-      console.error('Error during Gemini streaming:', aiErr);
+      console.error('Error during Gemini streaming after retries:', aiErr);
       res.write(`event: error\ndata: ${JSON.stringify({ message: 'AI streaming error: ' + aiErr.message })}\n\n`);
       return res.end();
     }
@@ -523,8 +543,8 @@ Return only the single-paragraph insight (100-150 words).`;
     // 4. Call Gemini to generate the insight
     try {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', apiVersion: 'v1' });
-      const result = await model.generateContent(prompt);
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const result = await geminiWithRetry(() => model.generateContent(prompt));
       const response = await result.response;
       const insightText = (response && response.text && response.text().trim()) || '';
 
@@ -535,7 +555,7 @@ Return only the single-paragraph insight (100-150 words).`;
 
       return res.status(200).json({ insight: insightText });
     } catch (aiErr) {
-      console.error('Gemini generation error for insights:', aiErr);
+      console.error('Gemini generation error for insights after retries:', aiErr);
       return res.status(500).json({ success: false, message: 'Failed to generate insight from AI.' });
     }
 
